@@ -1,0 +1,25 @@
+PROJECT CREATION AND LAUNCH
+0. AVD (for Android) must be installed and set up
+
+1. Go to the folder where you want to store the project (do not create the project folder yourself) and run the command below. npx will suggest installing any missing libraries and will create the project folder for you:
+	npx @react-native-community/cli init <name>
+
+2. To check requirements, use:
+	npx react-native doctor
+
+3. To run the project (on Android):
+	npx react-native run-android
+
+4. Когда чистый проект будет запускаться без проблем поместить файлы из шаблона в корень проекта с заменой и выполнить установку пакетов
+	npm install
+////////////
+
+4.1 Launching tools separately
+2.1/2.1 In the container, start only the Metro server:
+	npx react-native start [ --reset-cache]
+		where:  --reset-cache is an optional parameter to clear the metro cache before launch
+
+2.1/2.2 On the host machine, start only the build (default Metro port is 8081):
+		npx react-native run-android --port 8081
+
+3. Done. The project is ready to use
