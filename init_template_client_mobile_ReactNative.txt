@@ -10,16 +10,16 @@ PROJECT CREATION AND LAUNCH
 3. To run the project (on Android):
 	npx react-native run-android
 
-4. Когда чистый проект будет запускаться без проблем поместить файлы из шаблона в корень проекта с заменой и выполнить установку пакетов
+4. When the clean project runs without issues, copy the files from the template into the root of the project with replacement, and install the packages
 	npm install
+
+5. Done. The project is ready to use
 ////////////
 
-4.1 Launching tools separately
-2.1/2.1 In the container, start only the Metro server:
+Launching tools separately
+In the container, start only the Metro server:
 	npx react-native start [ --reset-cache]
 		where:  --reset-cache is an optional parameter to clear the metro cache before launch
 
-2.1/2.2 On the host machine, start only the build (default Metro port is 8081):
+On the host machine, start only the build (default Metro port is 8081):
 		npx react-native run-android --port 8081
-
-3. Done. The project is ready to use
