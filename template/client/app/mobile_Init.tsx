@@ -12,6 +12,7 @@ import {
     Text, 
 } from 'react-native';
 
+import config from '../../app.json';
 import {SuperProvider} from '../core/services/providers/superProviderService';
 import {useSystemData} from '../core/services/providers/systemDataProviderService';
 import {useStyleContext} from '../core/services/providers/styleProvider';
@@ -40,7 +41,7 @@ export default function App() {
 }
 
 function AppInit({}) {
-    const { setSysValues} = useSystemData();
+    const { setSysValue, setSysValues } = useSystemData();
     const { setLanguagePack } = useLanguage();
     const { styles, dimensions, addGroup } = useStyleContext();
 
@@ -51,6 +52,7 @@ function AppInit({}) {
             addGroup(StyleSheet.create(gstyles));
             setLanguagePack(languages['en-US']);
             setSysValues(initSysValues());
+            setSysValue('config', config);
             setReady(true);
         } catch (e) {
             console.error('Ошибка инициализации', e);
