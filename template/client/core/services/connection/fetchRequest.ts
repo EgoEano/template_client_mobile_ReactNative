@@ -62,43 +62,43 @@ export interface FetchResponse<T = any> {
 export interface ServerResponse<T = any> {
     status: number;
     message: string;
-    data?: T | null;
+    payload?: T | null;
 };
 
 //This one is constructor of fetch request, thats create connection through Fetch API and sends data to url.
 export default async function fetchRequest<T = any>({
-		url,
-		method: inputMethod = 'POST',
-		type = 'json',
-		data: inputData,
-		timeout = 10000,
+	url,
+	method: inputMethod = 'POST',
+	type = 'json',
+	data: inputData,
+	timeout = 10000,
 
-		headers: inputHeaders,
-		cache = 'no-store',
-		redirect = 'follow',
-		credentials = 'include',
+	headers: inputHeaders,
+	cache = 'no-store',
+	redirect = 'follow',
+	credentials = 'include',
 
-		onSuccess,
-		onError,
-		onFinally,
-		onTimeout,
-	}: FetchRequestOptions): Promise<FetchResponse<T>> {
-	const controller = new AbortController();
-	const signal = controller.signal;
-	const timeoutPromise = new Promise<Response>((_, reject) => {
-		const id = setTimeout(() => {
-			controller.abort();
-			onTimeout?.();
-			reject({
-				success: false,
-				message: "Request timed out",
-				status: 0,
-			} as FetchResponse);
-		}, timeout);
-		signal.addEventListener("abort", () => clearTimeout(id));
-	});
-
+	onSuccess,
+	onError,
+	onFinally,
+	onTimeout,
+}: FetchRequestOptions): Promise<FetchResponse<T>> {
 	try {
+		const controller = new AbortController();
+		const signal = controller.signal;
+		const timeoutPromise = new Promise<Response>((_, reject) => {
+			const id = setTimeout(() => {
+				controller.abort();
+				onTimeout?.();
+				reject({
+					success: false,
+					message: "Request timed out",
+					status: 0,
+				} as FetchResponse);
+			}, timeout);
+			signal.addEventListener("abort", () => clearTimeout(id));
+		});
+
 		let requestUrl = url.trim();
 		if (!requestUrl) {
 			throw {
