@@ -3,7 +3,7 @@ import type {RouteNode} from '../core/types/types';
 import mainRoutes from '../modules/main/routes'
 
 const appRoot:RouteNode = {
-    name: 'AppShell',
+    path: 'AppShell',
     optionsNavigator: {
         type: 'stack',
         options: {

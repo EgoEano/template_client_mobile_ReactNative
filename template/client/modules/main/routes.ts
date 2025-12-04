@@ -4,7 +4,7 @@ import {FirstScreen} from './first';
 import {SecondScreen} from './second';
 
 const routes: RouteNode = {
-    name: 'MainRoutes',
+    path: 'MainRoutes',
     optionsNavigator: {
         type: 'tabs',
         options: {
@@ -13,11 +13,11 @@ const routes: RouteNode = {
     },
     children: [
         {
-            name: 'First',
+            path: 'First',
             component: FirstScreen
         },
         {
-            name: 'Second',
+            path: 'Second',
             component: SecondScreen
         },
     ]

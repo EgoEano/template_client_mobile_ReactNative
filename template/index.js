@@ -1,3 +1,3 @@
-import init from './client/app/App';
+import init from './client/app/mobile_App';
 
 init();

@@ -1,13 +1,13 @@
-import React, {useMemo} from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, ViewStyle } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator, NativeStackNavigationOptions } from '@react-navigation/native-stack';
 import { createDrawerNavigator, DrawerNavigationOptions } from '@react-navigation/drawer';
 import { createBottomTabNavigator, BottomTabNavigationOptions } from '@react-navigation/bottom-tabs';
 
-import type {RouteNode, StackType} from '../core/types/types';
-import {useSystemData} from '../core/services/providers/systemDataProviderService';
-import {useStyleContext} from '../core/services/providers/styleProvider';
+import type { RouteNode, StackType } from '../core/types/types';
+import { useSystemData } from '../core/services/providers/systemDataProviderService';
+import { useStyleContext } from '../core/services/providers/styleProvider';
 
 import appRoot from '../modules/routes';
 
@@ -15,7 +15,7 @@ type ScreenOptions = NativeStackNavigationOptions | DrawerNavigationOptions | Bo
 
 
 export default function RootNavigator() {
-    const {getSysValue} = useSystemData();
+    const { getSysValue } = useSystemData();
     const { styles } = useStyleContext();
 
     const RootScreenComponent = useMemo(() => createScreenComponent(appRoot, getSysValue, styles), [getSysValue, styles]);
@@ -52,63 +52,63 @@ const renderStack = ({
         const stackType: StackType = node?.optionsNavigator?.type ?? defaultNavigatorType;
 
         const sysScreenOptions = defaultNavigatorScreenOptions;
-        const stackTypeScreenOptions = 
-            (stackType && sysScreenOptions?.[stackType]) 
-            ? sysScreenOptions[stackType] 
-            : {};
+        const stackTypeScreenOptions =
+            (stackType && sysScreenOptions?.[stackType])
+                ? sysScreenOptions[stackType]
+                : {};
         const screenOptions = {
-            ...stackTypeScreenOptions, 
+            ...stackTypeScreenOptions,
             ...(node?.optionsNavigator ?? {})
         };
-        
+
         const NestedStack = createNavigatorByType(stackType);
-    
+
         if (isRoot) {
             return (
                 <NestedStack.Navigator screenOptions={screenOptions}>
                     {node.children.map((child) => renderStack({
-                            node: child,
-                            Stack: NestedStack,
-                            isRoot: false,
-                            parentKey: node.name,
-                            defaultNavigatorType,
-                            defaultNavigatorScreenOptions,
-                            styles
-                        })
+                        node: child,
+                        Stack: NestedStack,
+                        isRoot: false,
+                        parentKey: node.path,
+                        defaultNavigatorType,
+                        defaultNavigatorScreenOptions,
+                        styles
+                    })
                     )}
                 </NestedStack.Navigator>
             );
         }
 
         return (
-            <Stack.Screen 
-                key={`${parentKey}-${node.name}`} 
-                name={node.name} 
+            <Stack.Screen
+                key={`${parentKey}-${node.path}`}
+                name={node.path}
                 options={node.options}
             >
                 {() => (
                     <NestedStack.Navigator screenOptions={screenOptions}>
                         {node.children!.map((child) => renderStack({
-                                node: child,
-                                Stack: NestedStack,
-                                isRoot: false,
-                                parentKey: `${parentKey}-${node.name}`,
-                                defaultNavigatorType,
-                                defaultNavigatorScreenOptions,
-                                styles
-                            })
+                            node: child,
+                            Stack: NestedStack,
+                            isRoot: false,
+                            parentKey: `${parentKey}-${node.path}`,
+                            defaultNavigatorType,
+                            defaultNavigatorScreenOptions,
+                            styles
+                        })
                         )}
                     </NestedStack.Navigator>
                 )}
             </Stack.Screen>
         );
     }
-  
+
     if (node.component) {
-        return(
+        return (
             <Stack.Screen
-                key={`${parentKey}-${node.name}`}
-                name={node.name}
+                key={`${parentKey}-${node.path}`}
+                name={node.path}
                 component={node.component}
                 options={node.options}
             />
@@ -117,15 +117,15 @@ const renderStack = ({
 
     return (
         <PlaceholderScreen
-            name={node.name}
+            name={node.path}
             style={styles.flexCenterContainer}
         />
     );
 };
 
 function createScreenComponent(
-    node: RouteNode = {name: 'bad'},
-    getSysValue: (key: string) => any | null, 
+    node: RouteNode = { path: 'bad' },
+    getSysValue: (key: string) => any | null,
     styles: Record<string, Record<string, any>>
 ): React.ComponentType<any> {
     const defaultNavigatorType: StackType = getSysValue('defaultNavigatorType');
@@ -144,9 +144,9 @@ function createScreenComponent(
     }
 }
 
-function PlaceholderScreen({ 
-    name, 
-    style 
+function PlaceholderScreen({
+    name,
+    style
 }: { name: string, style: ViewStyle }) {
     return (
         <View style={style}>

@@ -1,60 +1,50 @@
-import React, { Children, Dispatch, SetStateAction, useMemo } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import {
-  Pressable,
-  Text,
-  ViewStyle,
-  TextStyle,
-  GestureResponderEvent,
-  StyleSheet,
-  View,
-  ScrollView,
+    Pressable as RNPressable,
+    Text as RNText,
+    StyleSheet,
+    View as RNView,
+    ScrollView as RNScrollView,
+    TextInput as RNTextInput,
+    Keyboard,
 } from 'react-native';
+
+import type { Dispatch, SetStateAction } from 'react';
+import type {
+    ViewStyle,
+    TextStyle,
+    GestureResponderEvent,
+    StyleProp,
+    TextProps as RNTextProps
+} from 'react-native';
+
+import { useStyleContext } from "../../services/providers/styleProvider";
 
 
 //#region Atoms
 //#region Button
 type Props_ButtonStyleGroup = {
-  button?: ViewStyle;
-  text?: TextStyle;
-  pressed?: ViewStyle;
-  disabled?: ViewStyle;
+    button?: StyleProp<ViewStyle>;
+    text?: StyleProp<TextStyle>;
+    pressed?: StyleProp<ViewStyle>;
+    disabled?: StyleProp<ViewStyle>;
 };
 type Props_Button = {
-  title?: string;
-  onPress?: (event: GestureResponderEvent) => void;
-  onLongPress?: (event: GestureResponderEvent) => void;
-  disabled?: boolean;
-  android_ripple?: {
-    color?: string;
-    borderless?: boolean;
-    radius?: number;
-    foreground?: boolean;
-  };
-  style?: Props_ButtonStyleGroup;
-  textStyle?: TextStyle;
-  children?: React.ReactNode;
+    title?: string;
+    onPress?: (event: GestureResponderEvent) => void;
+    onLongPress?: (event: GestureResponderEvent) => void;
+    disabled?: boolean;
+    android_ripple?: {
+        color?: string;
+        borderless?: boolean;
+        radius?: number;
+        foreground?: boolean;
+    };
+    variant?: 'primary' | 'secondary' | "success" | "error" | "disabled";
+    style?: Props_ButtonStyleGroup;
+    textStyle?: StyleProp<TextStyle>;
+    children?: React.ReactNode;
 };
-
-const baseStyle_Button = StyleSheet.create({
-    button: {
-        backgroundColor: '#1e90ff',
-        paddingVertical: 12,
-        paddingHorizontal: 20,
-        borderRadius: 10,
-        alignItems: 'center',
-    },
-    pressed: {
-        opacity: 0.6,
-        transform: [{ scale: 0.97 }],
-    },
-    disabled: {
-        opacity: 0.4,
-    },
-    text: {
-        color: 'white',
-        fontSize: 16,
-    },
-});
 export function Button({
     title,
     onPress,
@@ -62,28 +52,199 @@ export function Button({
     disabled = false,
     android_ripple,
     style = {},
-    children
+    variant = 'primary',
+    children,
 }: Props_Button) {
+    const { theme } = useStyleContext();
+
+    const style_inner = useMemo(() => StyleSheet.create({
+        button: {
+            backgroundColor: '#1e90ff',
+            paddingVertical: 12,
+            paddingHorizontal: 20,
+            borderRadius: 10,
+            alignItems: 'center',
+            justifyContent: 'center',
+        },
+        pressed: {
+            opacity: 0.6,
+            transform: [{ scale: 0.97 }],
+        },
+        disabled: {
+            opacity: 0.4,
+        },
+        text: {
+            color: 'white',
+            fontSize: 16,
+        },
+    }), []);
+
     return (
-        <Pressable
+        <RNPressable
             onPress={onPress}
             onLongPress={onLongPress}
             disabled={disabled}
             android_ripple={android_ripple}
             style={({ pressed }) => [
-                baseStyle_Button.button,
-                pressed && baseStyle_Button.pressed,
-                disabled && baseStyle_Button.disabled,
+                style_inner.button,
+                pressed && style_inner.pressed,
+                disabled && style_inner.disabled,
+
+                theme?.components.button[variant]?.container,
+                disabled && theme?.components.button.disabled.container,
+
                 style?.button,
                 pressed && style?.pressed,
                 disabled && style?.disabled,
             ]}
         >
-            {children ?? <Text style={[baseStyle_Button.text, style?.text]}>{title ?? ''}</Text>}
-        </Pressable>
+            {children ?? <RNText style={[
+                style_inner.text,
+                theme?.components.button[variant]?.text,
+                style?.text
+            ]}>{title ?? ''}</RNText>}
+        </RNPressable>
     );
 }
 
+//#endregion
+
+//#region Text
+type TextStyleGroup = {
+    title?: StyleProp<TextStyle>;
+    body?: StyleProp<TextStyle>;
+    label?: StyleProp<TextStyle>;
+};
+
+type TextProps = RNTextProps & {
+    variant?: "title" | "subtitle" | "body" | "label";
+    colorVariant?: "primary" | "secondary";
+    style?: StyleProp<TextStyle>;
+    [key: string]: any;
+};
+
+export function Text({
+    variant = "body", colorVariant = "primary", style, children, ...props
+}: TextProps) {
+    const { theme } = useStyleContext();
+
+    const textStyle = useMemo(() => {
+        const t = theme?.components?.text;
+        const color = theme?.semantics.colors.text[colorVariant] ?? theme?.semantics.colors.text.primary
+        if (!t) return style;
+        const baseStyle = t?.[variant] ?? {};
+
+        return [baseStyle, { color }, style];
+    }, [theme, variant, style, colorVariant]);
+
+    return (
+        <RNText style={textStyle} {...props}>
+            {children}
+        </RNText>
+    );
+}
+
+//#endregion
+
+//#region InputText:string
+{/* <InputText value={"value"} onChange={onChange} style={style}/> */ }
+type Props_InputTextGroup = {
+    container?: StyleProp<ViewStyle>;
+    text?: StyleProp<TextStyle>;
+    placeholder?: StyleProp<ViewStyle>;
+    focused?: StyleProp<ViewStyle>;
+    error?: StyleProp<ViewStyle>;
+};
+
+type InputTextProps = {
+    value: string;
+    name?: string;
+    placeholder?: string;
+    onChange?: (val: string, name?: string | null) => void;
+    onFocus?: () => void;
+    onBlur?: () => void;
+    error?: boolean;
+    variant?: "primary" | "secondary" | "success" | "error" | "disabled" | "inverse";
+    style?: Props_InputTextGroup;
+    [key: string]: any;
+};
+
+export function InputText({
+    value,
+    name,
+    placeholder = '',
+    onChange,
+    onFocus,
+    onBlur,
+    error = false,
+    style = {},
+    variant = "primary",
+    ...props
+}: InputTextProps) {
+    const { theme } = useStyleContext();
+
+    const [focused, setFocused] = useState(false);
+
+    const handleChange = (val: string) => {
+        onChange?.(val, name ?? null);
+    };
+
+    const handleBlur = () => {
+        //Keyboard.dismiss();
+        setFocused(false);
+        onBlur?.();
+    };
+
+    const handleFocus = () => {
+        setFocused(true);
+        onFocus?.();
+    };
+
+    const style_inner = useMemo(() => {
+        const base = theme?.components.input;
+        const color = theme?.semantics.colors.text[variant] ?? theme?.semantics.colors.text.primary
+
+        return StyleSheet.create({
+            container: {
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                ...(base?.container ?? {}),
+                ...(base?.text ?? {}),
+                color,
+                ...(style?.container ?? {}),
+                ...(style?.text ?? {}),
+                ...(focused ? base?.focusedBorder : {}),
+                ...(focused ? style?.focused : {}),
+                ...(error ? base?.errorBorder : {}),
+                ...(error ? style?.error : {}),
+            },
+            text: {
+                ...(base?.text ?? {}),
+                color,
+                ...(style?.text ?? {}),
+            },
+            placeholder: {
+                ...(base?.placeholder ?? {}),
+                color,
+                ...(style?.placeholder ?? {}),
+            }
+        });
+    }, [theme, focused, error, style, variant]);
+
+    return (
+        <RNTextInput
+            value={value}
+            onChangeText={handleChange}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
+            style={style_inner.container}
+            placeholder={placeholder}
+            placeholderTextColor={style_inner.placeholder.color}
+            {...props}
+        />
+    );
+}
 //#endregion
 
 //#endregion
@@ -100,19 +261,20 @@ export function Button({
     </Modal> 
 */}
 type ModalProps = {
-    isShow: boolean, 
-    setIsShow: Dispatch<SetStateAction<boolean>>, 
-    closable: boolean, 
-    style?: ViewStyle, 
+    isShow: boolean,
+    setIsShow: Dispatch<SetStateAction<boolean>>,
+    closable?: boolean,
+    style?: StyleProp<ViewStyle>,
     children: React.ReactNode;
 };
 export function Modal({
-    isShow, 
-    setIsShow, 
-    closable = true, 
-    children, 
-    style, 
+    isShow,
+    setIsShow,
+    closable = true,
+    children,
+    style = {},
 }: ModalProps) {
+    const { theme } = useStyleContext();
 
     const style_inner = useMemo(() => StyleSheet.create({
         main: {
@@ -122,33 +284,52 @@ export function Modal({
             alignItems: 'center',
             justifyContent: 'center',
             backgroundColor: '#000000cf',
+            backdropFilter: `blur(${theme?.semantics.colors.overlays.blur ?? 0}px)`,
+            ...(theme?.components.modal?.overlay ?? {}),
             ...(style ?? {})
         },
-    }), [style]);
-  
+        content: {
+            minHeight: 0,
+            maxHeight: '100%',
+        }
+    }), [style, theme]);
+
     const toggleShow = () => {
         if (closable) setIsShow?.(s => !s);
     };
 
-  if (!isShow) return null;
+    if (!isShow) return null;
 
-  return (
-    <Pressable
-      onPress={toggleShow}
-      style={style_inner.main}
-    >
-      {children}
-    </Pressable>
-  );
+    return (
+        <RNPressable
+            onPress={toggleShow}
+            style={style_inner.main}
+        >
+            <RNPressable
+                style={[style_inner.content]}
+                onPress={() => { }}
+            >
+                {children}
+            </RNPressable>
+        </RNPressable>
+    );
 }
 //#endregion
 
-//#region ModalCard !!!!!!!!!!!!!!!!!!!!!!!!!!
-{/* <ModalCard isShow={isShow} setIsShow={setIsShow}>children</ModalCard> */}
+//#region ModalCard
+{/* 
+    <ModalCard 
+        isShow={isShow} 
+        setIsShow={setIsShow}
+    >
+        children
+    </ModalCard> 
+*/}
 type ModalCardProps = {
     isShow: boolean,
     setIsShow: Dispatch<SetStateAction<boolean>>,
     isHasCross?: boolean,
+    isScrollable?: boolean,
     closable?: boolean,
     children: React.ReactNode,
     style?: ModalCard_StyleGroupProps,
@@ -157,15 +338,18 @@ type ModalCard_StyleGroupProps = {
     modal?: ViewStyle;
     wrapper?: ViewStyle;
     card?: ViewStyle;
+    content?: ViewStyle;
 };
 export function ModalCard({
     isShow,
     setIsShow,
     isHasCross = true,
+    isScrollable = false,
     closable = true,
     children,
     style,
 }: ModalCardProps) {
+    const { theme } = useStyleContext();
 
     const style_inner = useMemo(() => StyleSheet.create({
         modal: style?.modal ?? {},
@@ -173,9 +357,10 @@ export function ModalCard({
             position: 'relative',
             maxWidth: '100%',
             maxHeight: '100%',
+            flex: 0,
             alignItems: 'center',
             justifyContent: 'center',
-            ...(style?.wrapper ?? {})
+            ...(style?.wrapper ?? {}),
         },
         closeButton: {
             position: 'absolute',
@@ -197,7 +382,6 @@ export function ModalCard({
         card: {
             position: 'relative',
             width: '100%',
-            //flex: 1,
             backgroundColor: '#fff',
             borderRadius: 12,
             elevation: 4,
@@ -205,93 +389,329 @@ export function ModalCard({
             shadowOffset: { width: 0, height: 2 },
             shadowOpacity: 0.2,
             shadowRadius: 4,
-            ...(style?.card ?? {})
+            ...(theme?.components.card.container ?? {}),
+            ...(style?.card ?? {}),
         },
+        content: style?.content ?? {}
     }), [style]);
 
     return (
-        <Modal 
-            isShow={isShow} 
-            setIsShow={setIsShow} 
+        <Modal
+            isShow={isShow}
+            setIsShow={setIsShow}
             closable={closable}
             style={style_inner.modal}
         >
-            <View style={style_inner.wrapper}>
+            <View style={style_inner.wrapper} >
                 {isHasCross && (
-                    <Pressable
+                    <RNPressable
                         style={style_inner.closeButton}
-                            onPress={() => setIsShow(false)}
-                            hitSlop={10}
-                        >
-                        <Text style={style_inner.closeButtonText}>⛌</Text>
-                    </Pressable>
+                        onPress={() => setIsShow(false)}
+                        hitSlop={10}
+                    >
+                        <RNText style={style_inner.closeButtonText}>⛌</RNText>
+                    </RNPressable>
                 )}
-                <CView
-                    isScrollable={false}
+                <Card
+                    isScrollable={isScrollable}
                     isAllowHorizontalScroll={false}
                     showsVerticalScrollIndicator={false}
-                    style={style_inner.card}
+                    style={{
+                        card: style_inner.card,
+                        content: style_inner.content,
+                    }}
                 >
                     {children}
-                </CView> 
-
+                </Card>
             </View>
         </Modal>
     );
 }
 //#endregion
 
-//#region CView 
+//#region View 
 {/* 
-    <CView
+    <View
         isScrollable={isScrollable}
         isAllowHorizontalScroll={isAllowHorizontalScroll}
         showsVerticalScrollIndicator={showsVerticalScrollIndicator}
         style={style}
-    ></CView> 
+    ></View> 
 */}
-type CViewProps = {
-    isScrollable: boolean;
-    isAllowHorizontalScroll: boolean;
-    showsVerticalScrollIndicator: boolean;
-    style?: ViewStyle;
+type ViewProps = React.ComponentProps<any> & {
+    isScrollable?: boolean;
+    isAllowHorizontalScroll?: boolean;
+    showsVerticalScrollIndicator?: boolean;
+    style?: StyleProp<ViewStyle>;
     children: React.ReactNode;
+    [key: string]: any;
 };
-export function CView({ 
+export function View({
     isScrollable = false,
     isAllowHorizontalScroll = false,
     showsVerticalScrollIndicator = true,
-    style = {}, 
-    children, 
-}: CViewProps) {
+    style = {},
+    children,
+    ...props
+}: ViewProps) {
     const style_inner = useMemo(() => StyleSheet.create({
+        container: {
+            width: '100%',
+            display: "flex",
+        },
         main: {
             display: "flex",
             flexDirection: "column",
             justifyContent: "flex-start",
             alignItems: "center",
             ...style
-        }
+        },
     }), [style]);
 
-  return (
-    isScrollable ?
-        <ScrollView 
-            style={{width: '100%'}}
-            contentContainerStyle={style_inner.main}
-            showsVerticalScrollIndicator={showsVerticalScrollIndicator}
-            bounces={true}
-            horizontal={isAllowHorizontalScroll}
-        >
-            {children}
-        </ScrollView> :
-        <View style={style_inner.main}>
-            {children}
-        </View>
-  );
+    return (
+        isScrollable ?
+            <RNScrollView
+                style={style_inner.container}
+                contentContainerStyle={style_inner.main}
+                showsVerticalScrollIndicator={showsVerticalScrollIndicator}
+                bounces={true}
+                horizontal={isAllowHorizontalScroll}
+                {...props}
+            >
+                {children}
+            </RNScrollView> :
+            <RNView style={style_inner.main} {...props}>
+                {children}
+            </RNView>
+    );
 };
 //#endregion
 
+//#region Card
+type Card_StyleGroupProps = {
+    card?: StyleProp<ViewStyle>;
+    content?: StyleProp<ViewStyle>;
+};
+type CardProps = {
+    isScrollable?: boolean;
+    isAllowHorizontalScroll?: boolean;
+    showsVerticalScrollIndicator?: boolean;
+    style?: Card_StyleGroupProps;
+    children: React.ReactNode;
+    [key: string]: any;
+};
+export function Card({
+    isScrollable = false,
+    isAllowHorizontalScroll = false,
+    showsVerticalScrollIndicator = true,
+    style = {},
+    children,
+    ...props
+}: CardProps) {
+    const { theme } = useStyleContext();
+
+    const cardTheme = theme?.components.card
+
+    const styleInner = useMemo(() => StyleSheet.create({
+        card: {
+            position: 'relative',
+            width: '100%',
+            backgroundColor: '#fff',
+            borderRadius: 12,
+            elevation: 4,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.2,
+            shadowRadius: 4,
+            ...(cardTheme?.container ?? {}),
+            ...(style?.card ?? {})
+        },
+        content: {
+            width: '100%',
+            //flex: 1,
+            ...(cardTheme?.content ?? {}),
+            ...(style?.content ?? {})
+        }
+    }), [style, theme]);
+
+    return (
+        <View
+            isScrollable={isScrollable}
+            isAllowHorizontalScroll={isAllowHorizontalScroll}
+            showsVerticalScrollIndicator={showsVerticalScrollIndicator}
+            style={styleInner.card}
+        >
+            <View style={styleInner.content}>
+                {children}
+            </View>
+        </View>
+    );
+}
+//#endregion
+
+
+//#region FormContent
+type FormContentContextType = {
+    values: Record<string, any>;
+    handleChange: (value: any, key: string) => void;
+    handleSubmit: (options?: any) => void;
+    handleCancel: (options?: any) => void;
+};
+
+interface FormContentProps {
+    formData?: Record<string, any>;
+    formDataRules?: Record<string, ((value: any, data: Record<string, any>) => boolean) | undefined>;
+    onSubmit?: (params: { data: Record<string, any>; options?: any; validation: { success: boolean; errors: string[] } }) => void;
+    onCancel?: (params: { data: Record<string, any>; options?: any; validation: { success: boolean; errors: string[] } }) => void;
+    onChange?: (params: { values: Record<string, any>; lastChangedKey: string | null }) => any;
+    isResetOnAction?: boolean;
+    children?: React.ReactNode | ((args: {
+        values: Record<string, any>;
+        handleChange: (v: any, k: string) => void;
+        handleSubmit: (options?: any) => void;
+        handleCancel: (options?: any) => void;
+    }) => React.ReactNode);
+    style?: React.CSSProperties;
+    [key: string]: any;
+};
+
+type FormContentAction = {
+    type: 'update_field';
+    key: string;
+    value: any;
+} | {
+    type: 'set_values';
+    values: Record<string, any>;
+} | {
+    type: 'reset';
+    initial: Record<string, any>;
+};
+
+const style_FormContent = StyleSheet.create({
+    main: {
+        width: '100%',
+        display: "flex",
+        flexDirection: "column",
+        gap: 10,
+    }
+});
+const formReducer = (
+    state: Record<string, any>,
+    action: FormContentAction
+) => {
+    switch (action.type) {
+        case 'update_field':
+            return { ...state, [action.key]: action.value };
+        case 'set_values':
+            return { ...action.values };
+        case 'reset':
+            return {};
+        default:
+            return state;
+    }
+};
+
+const FormContentContext = createContext<FormContentContextType | null>(null);
+export const useFormContext = () => useContext(FormContentContext);
+
+export function FormContent({
+    formData = {},
+    formDataRules = {},
+    onSubmit,
+    onCancel,
+    onChange,
+    isResetOnAction = true,
+    children,
+    style = {},
+    ...props
+}: FormContentProps) {
+    const initial = useRef<Record<string, any>>(formData);
+    const [values, dispatch] = useReducer(formReducer, formData);
+    const lastChangedKey = useRef<string | null>(null);
+
+    const handleChange = (value: any, key: string) => {
+        if (!key) return;
+        lastChangedKey.current = key;
+        dispatch({ type: 'update_field', key, value });
+    };
+
+    const validateData = (data: any, rules: any) => {
+        const errors: string[] = [];
+        Object.entries(data).forEach(([k, v]) => {
+            const rule = rules[k];
+            if (
+                rule &&
+                typeof rule === 'function' &&
+                !rule(v, data)
+            ) {
+                errors.push(k);
+            }
+        });
+
+        return {
+            success: errors.length === 0,
+            errors: errors,
+        }
+    };
+
+    const handleSubmit = (options: any) => {
+        const validation = validateData(values, formDataRules);
+        onSubmit?.({
+            data: values,
+            options,
+            validation,
+        });
+        if (isResetOnAction) handleReset();
+    };
+
+    const handleCancel = (options: any) => {
+        const validation = validateData(values, formDataRules);
+        onCancel?.({
+            data: values,
+            options,
+            validation,
+        });
+        if (isResetOnAction) handleReset();
+    };
+
+    const handleReset = () => {
+        dispatch({ type: "reset", initial: initial.current });
+    };
+
+    const shallowEqual = useCallback((a: any, b: any) => {
+        const keysA = Object.keys(a);
+        const keysB = Object.keys(b);
+        if (keysA.length !== keysB.length) return false;
+        for (let key of keysA) {
+            if (a[key] !== b[key]) return false;
+        }
+        return true;
+    }, []);
+
+    useEffect(() => {
+        if (!onChange) return;
+
+        const updated = onChange?.({ values, lastChangedKey: lastChangedKey.current });
+        if (!updated) return;
+
+        if (!shallowEqual(updated, values)) {
+            dispatch({ type: 'set_values', values: updated.data ?? updated });
+        }
+    }, [values]);
+
+    return (
+        <FormContentContext.Provider value={{ values, handleChange, handleSubmit, handleCancel }}>
+            <View
+                style={{ ...style_FormContent.main, ...style }}
+                {...props}
+            >
+                {typeof children === "function" ? children({ values, handleChange, handleSubmit, handleCancel }) : children}
+            </View>
+        </FormContentContext.Provider>
+    );
+}
+
+//#endregion
 
 
 //#endregion
